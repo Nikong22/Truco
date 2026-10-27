@@ -404,9 +404,11 @@ h1 {
 .board + .board { border-left: 1px solid var(--line); }
 .board.winner { background: color-mix(in srgb, var(--accent) 13%, transparent); }
 
+/* Es un div editable y no un input: así un nombre largo pasa a un segundo
+   renglón en vez de recortarse o achicar la letra. */
 .name {
   width: 100%;
-  max-width: 15ch;
+  max-width: 100%;
   background: transparent;
   border: 0;
   border-bottom: 1.5px dashed transparent;
@@ -415,8 +417,12 @@ h1 {
   font-weight: 700;
   font-size: clamp(19px, 2.4vw, 26px);
   letter-spacing: -.015em;
+  line-height: 1.14;
+  min-height: 1.14em;
   padding: 2px 4px 5px;
   border-radius: 3px;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 .name:hover { border-bottom-color: var(--line); }
 .name:focus { outline: none; border-bottom-color: var(--accent); }
@@ -469,6 +475,12 @@ h1 {
 /* ---------- pie ---------- */
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px 18px; flex-wrap: wrap; font-size: 12px; color: var(--chrome-soft); }
 .keys { display: flex; gap: 14px; flex-wrap: wrap; }
+/* Sin teclado los atajos no sirven: esto cubre también al celular acostado,
+   donde la pantalla es ancha pero sigue siendo un teléfono. */
+@media (hover: none) {
+  .keys { display: none; }
+  .foot { justify-content: center; }
+}
 kbd {
   font-family: var(--font-ui);
   font-size: 10.5px;
@@ -542,7 +554,9 @@ kbd {
 
   .sheet { border-radius: 16px; }
   .board { padding: 14px 8px; gap: 8px; }
-  .name { font-size: 17px; max-width: 100%; }
+  /* Dos renglones reservados: si un nombre es largo y el otro corto, los dos
+     puntajes siguen quedando a la misma altura. */
+  .name { font-size: 17px; max-width: 100%; min-height: calc(2.28em + 7px); }
   /* El puntaje se lee desde el otro lado de la mesa: en el celular manda el */
   .score-num { font-size: clamp(56px, 19vw, 92px); }
   .score-of { font-size: 9px; letter-spacing: .12em; }
@@ -591,7 +605,7 @@ kbd {
 
   <main class="sheet">
     <section class="board" id="board0">
-      <input class="name" id="name0" value="Nosotros" maxlength="16" spellcheck="false" autocomplete="off" aria-label="Nombre del equipo de la izquierda">
+      <div class="name" id="name0" contenteditable="true" role="textbox" aria-multiline="false" spellcheck="false" aria-label="Nombre del equipo de la izquierda">Nosotros</div>
       <div class="series" id="series0"></div>
       <div class="score">
         <span class="score-num" id="score0">0</span>
@@ -608,7 +622,7 @@ kbd {
     </section>
 
     <section class="board" id="board1">
-      <input class="name" id="name1" value="Ellos" maxlength="16" spellcheck="false" autocomplete="off" aria-label="Nombre del equipo de la derecha">
+      <div class="name" id="name1" contenteditable="true" role="textbox" aria-multiline="false" spellcheck="false" aria-label="Nombre del equipo de la derecha">Ellos</div>
       <div class="series" id="series1"></div>
       <div class="score">
         <span class="score-num" id="score1">0</span>
@@ -657,6 +671,7 @@ kbd {
   var KEY = "anotador-truco-v2";
   var SKINS = ["cielo", "cancha", "noche"];
   var NOMBRES = { cielo: "Cielo", cancha: "Cancha", noche: "Noche" };
+  var MAX_NOMBRE = 20;
   var STICKS = ["M12 10 V38", "M36 10 V38", "M12 10 H36", "M12 38 H36", "M12 38 L36 10"];
 
   var state = {
@@ -684,7 +699,9 @@ kbd {
       try {
         var d = JSON.parse(raw);
         if (d && typeof d === "object") {
-          if (Array.isArray(d.names) && d.names.length === 2) state.names = [String(d.names[0]), String(d.names[1])];
+          if (Array.isArray(d.names) && d.names.length === 2) {
+            state.names = [String(d.names[0]).slice(0, MAX_NOMBRE), String(d.names[1]).slice(0, MAX_NOMBRE)];
+          }
           if (d.target === 15 || d.target === 30) state.target = d.target;
           if (SKINS.indexOf(d.skin) !== -1) state.skin = d.skin;
           if (Array.isArray(d.s) && d.s.length === 2) state.s = [clampScore(d.s[0]), clampScore(d.s[1])];
@@ -777,6 +794,16 @@ kbd {
 
   var $ = function (id) { return document.getElementById(id); };
 
+  /* Deja el cursor al final, después de recortar o de pegar texto */
+  function cursorAlFinal(el) {
+    var rango = document.createRange();
+    rango.selectNodeContents(el);
+    rango.collapse(false);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(rango);
+  }
+
   function render() {
     document.documentElement.setAttribute("data-skin", state.skin);
     $("skin-name").textContent = NOMBRES[state.skin];
@@ -786,7 +813,7 @@ kbd {
 
     for (var p = 0; p < 2; p++) {
       var nameEl = $("name" + p);
-      if (document.activeElement !== nameEl) nameEl.value = state.names[p];
+      if (document.activeElement !== nameEl) nameEl.textContent = state.names[p];
 
       var scoreEl = $("score" + p);
       scoreEl.textContent = String(state.s[p]);
@@ -842,18 +869,37 @@ kbd {
     $("minus" + p).addEventListener("click", function () { bump(p, -1); });
     var nameEl = $("name" + p);
     nameEl.addEventListener("input", function () {
-      state.names[p] = nameEl.value;
+      if (nameEl.textContent.length > MAX_NOMBRE) {
+        nameEl.textContent = nameEl.textContent.slice(0, MAX_NOMBRE);
+        cursorAlFinal(nameEl);
+      }
+      state.names[p] = nameEl.textContent;
       save();
     });
     nameEl.addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter") nameEl.blur();
+      if (ev.key === "Enter") { ev.preventDefault(); nameEl.blur(); }
+    });
+    /* Pegar entra como texto pelado y recortado, sin formato ni saltos de línea */
+    nameEl.addEventListener("paste", function (ev) {
+      ev.preventDefault();
+      var datos = ev.clipboardData || window.clipboardData;
+      var texto = (datos ? datos.getData("text") : "").replace(/\s+/g, " ");
+      var libre = MAX_NOMBRE - nameEl.textContent.length;
+      if (libre <= 0) return;
+      var puesto = false;
+      try { puesto = document.execCommand("insertText", false, texto.slice(0, libre)); } catch (e) { puesto = false; }
+      if (!puesto) {
+        nameEl.textContent = (nameEl.textContent + texto).slice(0, MAX_NOMBRE);
+        cursorAlFinal(nameEl);
+      }
+      state.names[p] = nameEl.textContent;
+      save();
     });
     nameEl.addEventListener("blur", function () {
-      if (!nameEl.value.trim()) {
-        state.names[p] = p === 0 ? "Nosotros" : "Ellos";
-        save();
-        render();
-      }
+      var limpio = nameEl.textContent.replace(/\s+/g, " ").trim();
+      state.names[p] = limpio || (p === 0 ? "Nosotros" : "Ellos");
+      save();
+      render();
     });
   });
 
@@ -885,6 +931,8 @@ kbd {
   document.addEventListener("keydown", function (ev) {
     var tag = ev.target && ev.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA") return;
+    /* Mientras se escribe un nombre, las letras son letras y no atajos */
+    if (ev.target && ev.target.isContentEditable) return;
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); undo(); return; }
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     var k = ev.key.toLowerCase();
