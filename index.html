@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anotador de Truco</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- pwa:begin -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f4f9fd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#060f24" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Truco">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* Instalada, la app ocupa toda la pantalla: dejamos libre la franja del reloj y la de gestos */
+.app { padding-block: calc(clamp(16px, 2.4vh, 30px) + env(safe-area-inset-top, 0px)) calc(clamp(14px, 2vh, 24px) + env(safe-area-inset-bottom, 0px)); }
+</style>
+<!-- pwa:end -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+<style>
+/* Layout: hoja de vidrio dividida al medio sobre un fondo ilustrado — controles arriba, dos mitades espejadas, atajos al pie */
+:root {
+  --font-display: "Bricolage Grotesque", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Archivo", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* Palos de la baraja española, dibujados como máscara y pintados con --motif */
+  --motif-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170' viewBox='0 0 170 170' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg transform='translate(44,44)'%3E%3Ccircle cx='0' cy='0' r='14'/%3E%3Ccircle cx='0' cy='0' r='7'/%3E%3C/g%3E%3Cg transform='translate(126,44)'%3E%3Cpath d='M-11 -13 H11 V-5 A11 11 0 0 1 -11 -5 Z'/%3E%3Cpath d='M0 6 V13'/%3E%3Cpath d='M-9 15 H9'/%3E%3C/g%3E%3Cg transform='translate(44,126)'%3E%3Cpath d='M0 -15 V11'/%3E%3Cpath d='M-10 4 H10'/%3E%3Ccircle cx='0' cy='15' r='3'/%3E%3C/g%3E%3Cg transform='translate(126,126)'%3E%3Cpath d='M-9 15 L9 -13'/%3E%3Cpath d='M-4 6 L2 9'/%3E%3Cpath d='M2 -4 L8 -1'/%3E%3C/g%3E%3C/svg%3E");
+
+  /* Cielo: sol de rayos sobre blanco */
+  --bg: #f4f9fd;
+  --bg-art:
+    repeating-conic-gradient(from 182deg at 50% -16%, rgba(46,141,219,.11) 0deg 2.6deg, rgba(46,141,219,0) 2.6deg 9deg),
+    radial-gradient(125% 72% at 50% -14%, rgba(124,199,247,.5), rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, #e6f3fd 0%, #f7fbfe 52%, #ffffff 100%);
+  --bg-size: auto;
+  --sheet: rgba(255,255,255,.82);
+  --blur: 16px;
+  --line: #d4e7f6;
+  --ink: #0d2b55;
+  --ink-soft: #5e83ab;
+  --accent: #2e8ddb;
+  --accent-ink: #ffffff;
+  --mark: #0d2b55;
+  --mark-ghost: rgba(13,43,85,.15);
+  --chip: rgba(46,141,219,.08);
+  --chip-edge: rgba(13,43,85,.14);
+  --motif: #2e8ddb;
+  --motif-opacity: .07;
+  --glow: 0 28px 60px -34px rgba(13,43,85,.45);
+  --shade: rgba(10,30,60,.5);
+
+  /* Barra y pie: viven sobre el fondo, no sobre la hoja. Siguen a los tokens
+     de arriba salvo en los temas donde el fondo y la hoja van en claves opuestas. */
+  --chrome-ink: var(--ink);
+  --chrome-soft: var(--ink-soft);
+  --chrome-chip: var(--chip);
+  --chrome-chip-edge: var(--chip-edge);
+  --chrome-accent: var(--accent);
+  --chrome-accent-ink: var(--accent-ink);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-skin]) {
+    --bg: #060f24;
+    --bg-art:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23d6ecff'%3E%3Ccircle cx='26' cy='38' r='1.5' opacity='.75'/%3E%3Ccircle cx='172' cy='92' r='1.2' opacity='.5'/%3E%3Ccircle cx='98' cy='164' r='1.7' opacity='.6'/%3E%3Ccircle cx='226' cy='50' r='1.1' opacity='.45'/%3E%3Ccircle cx='62' cy='214' r='1.4' opacity='.55'/%3E%3Ccircle cx='204' cy='196' r='1.2' opacity='.4'/%3E%3Ccircle cx='136' cy='20' r='1' opacity='.4'/%3E%3Ccircle cx='8' cy='120' r='1.3' opacity='.5'/%3E%3C/g%3E%3C/svg%3E"),
+      radial-gradient(130% 80% at 50% -10%, rgba(76,179,242,.24), rgba(0,0,0,0) 62%),
+      linear-gradient(180deg, #081630 0%, #040b1a 100%);
+    --bg-size: 260px 260px, auto, auto;
+    --sheet: rgba(12,27,54,.72);
+    --line: #1d3760;
+    --ink: #e9f3ff;
+    --ink-soft: #85a3ca;
+    --accent: #4cb3f2;
+    --accent-ink: #04172e;
+    --mark: #d6ecff;
+    --mark-ghost: rgba(214,236,255,.16);
+    --chip: rgba(214,236,255,.07);
+    --chip-edge: rgba(214,236,255,.14);
+    --motif: #4cb3f2;
+    --motif-opacity: .1;
+    --glow: 0 30px 70px -34px rgba(0,0,0,.8);
+    --shade: rgba(3,9,22,.78);
+    color-scheme: dark;
+  }
+}
+
+/* Cielo */
+[data-skin="cielo"] {
+  --bg: #f4f9fd;
+  --bg-art:
+    repeating-conic-gradient(from 182deg at 50% -16%, rgba(46,141,219,.11) 0deg 2.6deg, rgba(46,141,219,0) 2.6deg 9deg),
+    radial-gradient(125% 72% at 50% -14%, rgba(124,199,247,.5), rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, #e6f3fd 0%, #f7fbfe 52%, #ffffff 100%);
+  --bg-size: auto;
+  --sheet: rgba(255,255,255,.82);
+  --line: #d4e7f6; --ink: #0d2b55; --ink-soft: #5e83ab;
+  --accent: #2e8ddb; --accent-ink: #ffffff;
+  --mark: #0d2b55; --mark-ghost: rgba(13,43,85,.15);
+  --chip: rgba(46,141,219,.08); --chip-edge: rgba(13,43,85,.14);
+  --motif: #2e8ddb; --motif-opacity: .07;
+  --glow: 0 28px 60px -34px rgba(13,43,85,.45);
+  --shade: rgba(10,30,60,.5);
+  color-scheme: light;
+}
+
+/* Cancha: rayas celestes y blancas, tablero azul encima */
+[data-skin="cancha"] {
+  --bg: #bcdcf3;
+  --bg-art:
+    radial-gradient(120% 65% at 50% 0%, rgba(255,255,255,.75), rgba(255,255,255,0) 58%),
+    repeating-linear-gradient(90deg, #a6d1ef 0 74px, #f2fafe 74px 148px);
+  --bg-size: auto;
+  --sheet: rgba(13,43,85,.9);
+  --line: rgba(255,255,255,.18);
+  --ink: #f3f9ff;
+  --ink-soft: #a9c9e8;
+  --accent: #7cc7f7;
+  --accent-ink: #072b4f;
+  --mark: #ffffff;
+  --mark-ghost: rgba(255,255,255,.2);
+  --chip: rgba(255,255,255,.1);
+  --chip-edge: rgba(255,255,255,.22);
+  --motif: #0d2b55;
+  --motif-opacity: .08;
+  --glow: 0 30px 64px -32px rgba(8,34,66,.6);
+  --shade: rgba(8,34,66,.62);
+  --chrome-ink: #0d2b55;
+  --chrome-soft: #3b6391;
+  --chrome-chip: rgba(255,255,255,.55);
+  --chrome-chip-edge: rgba(13,43,85,.2);
+  --chrome-accent: #1f6aa8;
+  --chrome-accent-ink: #ffffff;
+  color-scheme: light;
+}
+
+/* Noche: cielo estrellado */
+[data-skin="noche"] {
+  --bg: #060f24;
+  --bg-art:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23d6ecff'%3E%3Ccircle cx='26' cy='38' r='1.5' opacity='.75'/%3E%3Ccircle cx='172' cy='92' r='1.2' opacity='.5'/%3E%3Ccircle cx='98' cy='164' r='1.7' opacity='.6'/%3E%3Ccircle cx='226' cy='50' r='1.1' opacity='.45'/%3E%3Ccircle cx='62' cy='214' r='1.4' opacity='.55'/%3E%3Ccircle cx='204' cy='196' r='1.2' opacity='.4'/%3E%3Ccircle cx='136' cy='20' r='1' opacity='.4'/%3E%3Ccircle cx='8' cy='120' r='1.3' opacity='.5'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(130% 80% at 50% -10%, rgba(76,179,242,.24), rgba(0,0,0,0) 62%),
+    linear-gradient(180deg, #081630 0%, #040b1a 100%);
+  --bg-size: 260px 260px, auto, auto;
+  --sheet: rgba(12,27,54,.72);
+  --line: #1d3760; --ink: #e9f3ff; --ink-soft: #85a3ca;
+  --accent: #4cb3f2; --accent-ink: #04172e;
+  --mark: #d6ecff; --mark-ghost: rgba(214,236,255,.16);
+  --chip: rgba(214,236,255,.07); --chip-edge: rgba(214,236,255,.14);
+  --motif: #4cb3f2; --motif-opacity: .1;
+  --glow: 0 30px 70px -34px rgba(0,0,0,.8);
+  --shade: rgba(3,9,22,.78);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background-color: var(--bg);
+  background-image: var(--bg-art);
+  background-size: var(--bg-size, auto);
+  background-attachment: fixed;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+/* Palos de la baraja, repetidos por detrás de todo */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--motif);
+  -webkit-mask-image: var(--motif-img);
+  mask-image: var(--motif-img);
+  -webkit-mask-size: 170px 170px;
+  mask-size: 170px 170px;
+  opacity: var(--motif-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+[hidden] { display: none !important; }
+
+.app {
+  position: relative;
+  z-index: 1;
+  color: var(--chrome-ink);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2.2vh, 26px);
+  padding-block: clamp(16px, 2.4vh, 30px) clamp(14px, 2vh, 24px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 1180px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+/* ---------- barra ---------- */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand svg { width: 30px; height: 30px; flex: none; }
+.brand svg path { stroke: var(--chrome-accent); stroke-width: 4; stroke-linecap: round; fill: none; }
+h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(20px, 2.5vw, 27px);
+  letter-spacing: -.02em;
+  margin: 0;
+}
+.controls { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; min-width: 0; }
+
+.seg {
+  display: flex;
+  background: var(--chrome-chip);
+  border: 1px solid var(--chrome-chip-edge);
+  border-radius: 11px;
+  padding: 3px;
+  gap: 3px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.seg > button {
+  border: 0;
+  background: transparent;
+  color: var(--chrome-soft);
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+.seg > button:hover { color: var(--chrome-ink); }
+.seg > button[aria-pressed="true"] { background: var(--chrome-accent); color: var(--chrome-accent-ink); }
+.seg-label {
+  align-self: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--chrome-soft);
+  margin-right: 2px;
+  padding-left: 7px;
+}
+
+.btn {
+  border: 1px solid var(--chrome-chip-edge);
+  background: var(--chrome-chip);
+  border-radius: 11px;
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: border-color .16s ease, background .16s ease, opacity .16s ease;
+}
+.btn:hover:not(:disabled) { border-color: var(--chrome-accent); }
+.btn:disabled { opacity: .38; cursor: default; }
+.btn-strong { background: var(--chrome-accent); border-color: var(--chrome-accent); color: var(--chrome-accent-ink); }
+
+/* ---------- la hoja ---------- */
+.sheet {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--sheet);
+  color: var(--ink);
+  -webkit-backdrop-filter: blur(var(--blur, 16px));
+  backdrop-filter: blur(var(--blur, 16px));
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--glow);
+  overflow: hidden;
+  min-height: 0;
+}
+.board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.8vh, 20px);
+  padding: clamp(18px, 3vh, 32px) clamp(14px, 2.4vw, 30px);
+  min-width: 0;
+  transition: background .2s ease;
+}
+.board + .board { border-left: 1px solid var(--line); }
+.board.winner { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+
+.name {
+  width: 100%;
+  max-width: 15ch;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px dashed transparent;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(19px, 2.4vw, 26px);
+  letter-spacing: -.015em;
+  padding: 2px 4px 5px;
+  border-radius: 3px;
+}
+.name:hover { border-bottom-color: var(--line); }
+.name:focus { outline: none; border-bottom-color: var(--accent); }
+
+.series { display: flex; gap: 5px; align-items: center; min-height: 11px; }
+.series i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: block; }
+.series span { font-size: 11px; font-weight: 700; color: var(--ink-soft); letter-spacing: .06em; }
+
+.score { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: auto; }
+.score-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(62px, 11vw, 140px);
+  line-height: .9;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.05em;
+}
+.score-num.pop { animation: pop .22s ease; }
+@keyframes pop { 0% { transform: scale(.9); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+.score-of { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); }
+
+.halves { display: flex; flex-direction: column; gap: 14px; width: 100%; margin-bottom: auto; }
+.half { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.half-label { font-size: 10.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); }
+.groups { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+.grp { width: clamp(34px, 4.4vw, 46px); height: auto; }
+.grp path { stroke-width: 4.5; stroke-linecap: round; fill: none; transition: stroke .2s ease; }
+.grp path.on { stroke: var(--mark); }
+.grp path.off { stroke: var(--mark-ghost); }
+
+.pad { display: flex; gap: 12px; width: 100%; max-width: 330px; margin-top: auto; }
+.pad-btn {
+  flex: 1;
+  border-radius: 15px;
+  border: 1.5px solid var(--chip-edge);
+  background: var(--chip);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  padding: clamp(12px, 1.9vh, 20px) 0;
+  cursor: pointer;
+  transition: transform .09s ease, background .16s ease, border-color .16s ease, opacity .16s ease;
+}
+.pad-btn:hover:not(:disabled) { border-color: var(--accent); }
+.pad-btn:active:not(:disabled) { transform: translateY(2px); }
+.pad-btn:disabled { opacity: .3; cursor: default; }
+.pad-btn.plus { flex: 1.45; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* ---------- pie ---------- */
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 10px 18px; flex-wrap: wrap; font-size: 12px; color: var(--chrome-soft); }
+.keys { display: flex; gap: 14px; flex-wrap: wrap; }
+kbd {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  border: 1px solid var(--chrome-chip-edge);
+  background: var(--chrome-chip);
+  border-radius: 5px;
+  padding: 2px 5px;
+  margin-right: 2px;
+}
+.link {
+  border: 0; background: none; padding: 0;
+  color: var(--chrome-soft);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link:hover { color: var(--chrome-ink); }
+
+/* ---------- cartel de ganador ---------- */
+.win {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-left, 0px));
+  background: var(--shade);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  z-index: 20;
+}
+.win-card {
+  background: var(--sheet);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--glow);
+  padding: clamp(26px, 4vw, 40px);
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  animation: rise .26s ease;
+}
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.win-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+.win-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 5vw, 44px); line-height: 1.05; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.win-score { margin: 10px 0 22px; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.win-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+/* El cartel flota sobre el fondo pero usa los colores de la hoja, no los de la barra */
+.win-actions .btn { padding: 11px 20px; font-size: 14px; background: var(--chip); border-color: var(--chip-edge); color: var(--ink); }
+.win-actions .btn:hover:not(:disabled) { border-color: var(--accent); }
+.win-actions .btn-strong { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+@media (max-width: 760px) {
+  .sheet { grid-template-columns: 1fr; }
+  .board + .board { border-left: 0; border-top: 1px solid var(--line); }
+  .pad { margin-top: 4px; }
+  .name { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M12 10 V38"></path><path d="M36 10 V38"></path>
+        <path d="M12 10 H36"></path><path d="M12 38 H36"></path>
+        <path d="M12 38 L36 10"></path>
+      </svg>
+      <h1>Anotador de Truco</h1>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Puntos de la partida">
+        <span class="seg-label">Partida</span>
+        <button type="button" id="t15">a 15</button>
+        <button type="button" id="t30">a 30</button>
+      </div>
+      <div class="seg" role="group" aria-label="Diseño">
+        <button type="button" id="skin-cielo">Cielo</button>
+        <button type="button" id="skin-cancha">Cancha</button>
+        <button type="button" id="skin-noche">Noche</button>
+      </div>
+      <button type="button" class="btn" id="undo">Deshacer</button>
+      <button type="button" class="btn btn-strong" id="new-game">Nueva partida</button>
+    </div>
+  </header>
+
+  <main class="sheet">
+    <section class="board" id="board0">
+      <input class="name" id="name0" value="Nosotros" maxlength="16" spellcheck="false" autocomplete="off" aria-label="Nombre del equipo de la izquierda">
+      <div class="series" id="series0"></div>
+      <div class="score">
+        <span class="score-num" id="score0">0</span>
+        <span class="score-of">de <span id="goal0">30</span> puntos</span>
+      </div>
+      <div class="halves">
+        <div class="half"><span class="half-label">Malas</span><div class="groups" id="malas0"></div></div>
+        <div class="half"><span class="half-label">Buenas</span><div class="groups" id="buenas0"></div></div>
+      </div>
+      <div class="pad">
+        <button type="button" class="pad-btn" id="minus0" aria-label="Restar un punto a la izquierda">−</button>
+        <button type="button" class="pad-btn plus" id="plus0" aria-label="Sumar un punto a la izquierda">+</button>
+      </div>
+    </section>
+
+    <section class="board" id="board1">
+      <input class="name" id="name1" value="Ellos" maxlength="16" spellcheck="false" autocomplete="off" aria-label="Nombre del equipo de la derecha">
+      <div class="series" id="series1"></div>
+      <div class="score">
+        <span class="score-num" id="score1">0</span>
+        <span class="score-of">de <span id="goal1">30</span> puntos</span>
+      </div>
+      <div class="halves">
+        <div class="half"><span class="half-label">Malas</span><div class="groups" id="malas1"></div></div>
+        <div class="half"><span class="half-label">Buenas</span><div class="groups" id="buenas1"></div></div>
+      </div>
+      <div class="pad">
+        <button type="button" class="pad-btn" id="minus1" aria-label="Restar un punto a la derecha">−</button>
+        <button type="button" class="pad-btn plus" id="plus1" aria-label="Sumar un punto a la derecha">+</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="keys">
+      <span><kbd>A</kbd><kbd>Z</kbd> izquierda</span>
+      <span><kbd>K</kbd><kbd>M</kbd> derecha</span>
+      <span><kbd>N</kbd> nueva partida</span>
+      <span><kbd>Ctrl</kbd><kbd>Z</kbd> deshacer</span>
+    </div>
+    <button type="button" class="link" id="reset-series">Borrar partidas ganadas</button>
+  </footer>
+</div>
+
+<div class="win" id="win" hidden role="dialog" aria-modal="true" aria-labelledby="win-name">
+  <div class="win-card">
+    <p class="win-kicker">Partida terminada</p>
+    <h2 class="win-name" id="win-name">—</h2>
+    <p class="win-score" id="win-score">—</p>
+    <div class="win-actions">
+      <button type="button" class="btn btn-strong" id="rematch">Revancha</button>
+      <button type="button" class="btn" id="close-win">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<p class="sr" id="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "anotador-truco-v2";
+  var SKINS = ["cielo", "cancha", "noche"];
+  var STICKS = ["M12 10 V38", "M36 10 V38", "M12 10 H36", "M12 38 H36", "M12 38 L36 10"];
+
+  var state = {
+    names: ["Nosotros", "Ellos"],
+    target: 30,
+    skin: null,
+    s: [0, 0],
+    wins: [0, 0],
+    over: null
+  };
+  var history = [];
+  var lastScores = [0, 0];
+  var winDismissed = false;
+
+  function clampScore(n) {
+    n = Number(n);
+    if (!isFinite(n)) return 0;
+    return Math.max(0, Math.min(state.target, Math.round(n)));
+  }
+
+  function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(KEY); } catch (e) { raw = null; }
+    if (raw) {
+      try {
+        var d = JSON.parse(raw);
+        if (d && typeof d === "object") {
+          if (Array.isArray(d.names) && d.names.length === 2) state.names = [String(d.names[0]), String(d.names[1])];
+          if (d.target === 15 || d.target === 30) state.target = d.target;
+          if (SKINS.indexOf(d.skin) !== -1) state.skin = d.skin;
+          if (Array.isArray(d.s) && d.s.length === 2) state.s = [clampScore(d.s[0]), clampScore(d.s[1])];
+          if (Array.isArray(d.wins) && d.wins.length === 2) state.wins = [Math.max(0, d.wins[0] | 0), Math.max(0, d.wins[1] | 0)];
+          if (d.over === 0 || d.over === 1) state.over = d.over;
+        }
+      } catch (e) { /* datos ilegibles: arrancamos limpio */ }
+    }
+    if (!state.skin) {
+      var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      state.skin = prefersDark ? "noche" : "cielo";
+    }
+    lastScores = [state.s[0], state.s[1]];
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* sin guardado disponible */ }
+  }
+
+  function malasCap() { return Math.floor(state.target / 2); }
+  function buenasCap() { return state.target - malasCap(); }
+
+  function snapshot() {
+    return JSON.stringify({ s: state.s, wins: state.wins, over: state.over, target: state.target });
+  }
+
+  function change(fn) {
+    history.push(snapshot());
+    if (history.length > 200) history.shift();
+    fn();
+    settle();
+    save();
+    render();
+  }
+
+  /* Mantiene coherentes puntaje, ganador y serie después de cualquier cambio. */
+  function settle() {
+    state.s[0] = clampScore(state.s[0]);
+    state.s[1] = clampScore(state.s[1]);
+    if (state.over !== null && state.s[state.over] < state.target) {
+      state.wins[state.over] = Math.max(0, state.wins[state.over] - 1);
+      state.over = null;
+    }
+    if (state.over === null) {
+      for (var p = 0; p < 2; p++) {
+        if (state.s[p] >= state.target) {
+          state.over = p;
+          state.wins[p] += 1;
+          break;
+        }
+      }
+    }
+  }
+
+  function undo() {
+    var prev = history.pop();
+    if (!prev) return;
+    try {
+      var d = JSON.parse(prev);
+      state.s = [d.s[0], d.s[1]];
+      state.wins = [d.wins[0], d.wins[1]];
+      state.over = d.over;
+      if (d.target === 15 || d.target === 30) state.target = d.target;
+    } catch (e) { return; }
+    save();
+    render();
+  }
+
+  function groupsHtml(points, cap) {
+    var html = "";
+    for (var start = 0; start < cap; start += 5) {
+      var size = Math.min(5, cap - start);
+      var filled = Math.max(0, Math.min(size, points - start));
+      html += '<svg class="grp" viewBox="0 0 48 48" aria-hidden="true">';
+      for (var i = 0; i < size; i++) {
+        html += '<path class="' + (i < filled ? "on" : "off") + '" d="' + STICKS[i] + '"></path>';
+      }
+      html += "</svg>";
+    }
+    return html;
+  }
+
+  function seriesHtml(n) {
+    if (n === 0) return "";
+    if (n > 8) return '<i></i><span>&times;' + n + "</span>";
+    var html = "";
+    for (var i = 0; i < n; i++) html += "<i></i>";
+    return html;
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function render() {
+    document.documentElement.setAttribute("data-skin", state.skin);
+    SKINS.forEach(function (s) {
+      $("skin-" + s).setAttribute("aria-pressed", String(state.skin === s));
+    });
+    $("t15").setAttribute("aria-pressed", String(state.target === 15));
+    $("t30").setAttribute("aria-pressed", String(state.target === 30));
+
+    for (var p = 0; p < 2; p++) {
+      var nameEl = $("name" + p);
+      if (document.activeElement !== nameEl) nameEl.value = state.names[p];
+
+      var scoreEl = $("score" + p);
+      scoreEl.textContent = String(state.s[p]);
+      if (state.s[p] !== lastScores[p]) {
+        scoreEl.classList.remove("pop");
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add("pop");
+      }
+      $("goal" + p).textContent = String(state.target);
+      $("malas" + p).innerHTML = groupsHtml(Math.min(state.s[p], malasCap()), malasCap());
+      $("buenas" + p).innerHTML = groupsHtml(Math.max(0, state.s[p] - malasCap()), buenasCap());
+      $("series" + p).innerHTML = seriesHtml(state.wins[p]);
+      $("plus" + p).disabled = state.s[p] >= state.target;
+      $("minus" + p).disabled = state.s[p] <= 0;
+      $("board" + p).classList.toggle("winner", state.over === p);
+    }
+
+    $("undo").disabled = history.length === 0;
+    $("reset-series").hidden = state.wins[0] + state.wins[1] === 0;
+
+    var win = $("win");
+    if (state.over !== null && !winDismissed) {
+      $("win-name").textContent = "Ganó " + (state.names[state.over] || (state.over === 0 ? "la izquierda" : "la derecha"));
+      $("win-score").textContent = state.names[0] + " " + state.s[0] + " · " + state.names[1] + " " + state.s[1];
+      win.hidden = false;
+      $("rematch").focus();
+    } else {
+      win.hidden = true;
+    }
+
+    if (state.s[0] !== lastScores[0] || state.s[1] !== lastScores[1]) {
+      $("status").textContent = state.names[0] + " " + state.s[0] + ", " + state.names[1] + " " + state.s[1];
+    }
+    lastScores = [state.s[0], state.s[1]];
+  }
+
+  function bump(p, d) {
+    if (state.s[p] + d < 0 || state.s[p] + d > state.target) return;
+    winDismissed = false;
+    change(function () { state.s[p] = state.s[p] + d; });
+  }
+
+  function newGame() {
+    winDismissed = false;
+    change(function () {
+      state.s = [0, 0];
+      state.over = null;
+    });
+  }
+
+  /* ---------- eventos ---------- */
+  [0, 1].forEach(function (p) {
+    $("plus" + p).addEventListener("click", function () { bump(p, 1); });
+    $("minus" + p).addEventListener("click", function () { bump(p, -1); });
+    var nameEl = $("name" + p);
+    nameEl.addEventListener("input", function () {
+      state.names[p] = nameEl.value;
+      save();
+    });
+    nameEl.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") nameEl.blur();
+    });
+    nameEl.addEventListener("blur", function () {
+      if (!nameEl.value.trim()) {
+        state.names[p] = p === 0 ? "Nosotros" : "Ellos";
+        save();
+        render();
+      }
+    });
+  });
+
+  [15, 30].forEach(function (n) {
+    $("t" + n).addEventListener("click", function () {
+      if (state.target === n) return;
+      winDismissed = false;
+      change(function () { state.target = n; });
+    });
+  });
+
+  SKINS.forEach(function (s) {
+    $("skin-" + s).addEventListener("click", function () {
+      state.skin = s;
+      save();
+      render();
+    });
+  });
+
+  $("new-game").addEventListener("click", newGame);
+  $("rematch").addEventListener("click", newGame);
+  $("undo").addEventListener("click", undo);
+  $("close-win").addEventListener("click", function () {
+    winDismissed = true;
+    render();
+  });
+  $("reset-series").addEventListener("click", function () {
+    change(function () { state.wins = [0, 0]; });
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    var tag = ev.target && ev.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); undo(); return; }
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    var k = ev.key.toLowerCase();
+    if (k === "a") { ev.preventDefault(); bump(0, 1); }
+    else if (k === "z") { ev.preventDefault(); bump(0, -1); }
+    else if (k === "k") { ev.preventDefault(); bump(1, 1); }
+    else if (k === "m") { ev.preventDefault(); bump(1, -1); }
+    else if (k === "n") { ev.preventDefault(); newGame(); }
+    else if (k === "escape" && state.over !== null) { winDismissed = true; render(); }
+  });
+
+  load();
+  render();
+})();
+</script>
+<!-- pwa:begin -->
+<script>
+/* Guarda la app en el telefono para que abra sin internet.
+   Abierta como archivo local no corre, y esta bien: ahi ya es local. */
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+<!-- pwa:end -->
+</body>
+</html>
