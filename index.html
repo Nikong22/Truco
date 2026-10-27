@@ -18,6 +18,9 @@
 <style>
 /* Instalada, la app ocupa toda la pantalla: dejamos libre la franja del reloj y la de gestos */
 .app { padding-block: calc(clamp(16px, 2.4vh, 30px) + env(safe-area-inset-top, 0px)) calc(clamp(14px, 2vh, 24px) + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 720px) {
+  .app { padding-block: calc(10px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)); }
+}
 </style>
 <!-- pwa:end -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -417,11 +420,38 @@ kbd {
 .win-actions .btn:hover:not(:disabled) { border-color: var(--accent); }
 .win-actions .btn-strong { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
-@media (max-width: 760px) {
-  .sheet { grid-template-columns: 1fr; }
-  .board + .board { border-left: 0; border-top: 1px solid var(--line); }
-  .pad { margin-top: 4px; }
-  .name { font-size: 22px; }
+/* En el celular los dos tableros siguen lado a lado, como la hoja de verdad:
+   anotar no deberia obligar a scrollear hasta el otro equipo. */
+@media (max-width: 720px) {
+  .app { gap: 10px; padding-block: 10px; }
+  .bar { gap: 8px 10px; justify-content: center; }
+  .brand { gap: 8px; }
+  .brand svg { width: 22px; height: 22px; }
+  h1 { font-size: 17px; }
+  .controls { width: 100%; justify-content: center; gap: 6px; }
+  .seg { border-radius: 9px; padding: 2px; }
+  .seg > button { padding: 6px 10px; font-size: 12px; border-radius: 7px; }
+  .seg-label { display: none; }
+  .btn { padding: 7px 11px; font-size: 12px; border-radius: 9px; }
+
+  .sheet { border-radius: 16px; }
+  .board { padding: 14px 8px; gap: 8px; }
+  .name { font-size: 17px; max-width: 100%; }
+  /* El puntaje se lee desde el otro lado de la mesa: en el celular manda el */
+  .score-num { font-size: clamp(56px, 19vw, 92px); }
+  .score-of { font-size: 9px; letter-spacing: .12em; }
+  .score-of .opt { display: none; }
+  .halves { gap: 10px; }
+  .half-label { font-size: 9px; letter-spacing: .14em; }
+  .groups { gap: 7px; }
+  .grp { width: 34px; }
+  /* Sin este cero el hueco de abajo queda del doble que el de arriba */
+  .pad { max-width: none; gap: 8px; margin-top: 0; }
+  .pad-btn { font-size: 25px; padding: 14px 0; border-radius: 12px; }
+
+  /* Sin teclado, los atajos solo ocupan lugar */
+  .keys { display: none; }
+  .foot { justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
@@ -461,7 +491,7 @@ kbd {
       <div class="series" id="series0"></div>
       <div class="score">
         <span class="score-num" id="score0">0</span>
-        <span class="score-of">de <span id="goal0">30</span> puntos</span>
+        <span class="score-of">de <span id="goal0">30</span><span class="opt"> puntos</span></span>
       </div>
       <div class="halves">
         <div class="half"><span class="half-label">Malas</span><div class="groups" id="malas0"></div></div>
@@ -478,7 +508,7 @@ kbd {
       <div class="series" id="series1"></div>
       <div class="score">
         <span class="score-num" id="score1">0</span>
-        <span class="score-of">de <span id="goal1">30</span> puntos</span>
+        <span class="score-of">de <span id="goal1">30</span><span class="opt"> puntos</span></span>
       </div>
       <div class="halves">
         <div class="half"><span class="half-label">Malas</span><div class="groups" id="malas1"></div></div>
