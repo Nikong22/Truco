@@ -68,9 +68,9 @@ Sirve en Android 5 o más nuevo y en iPhone con iOS 11.3 o más nuevo. Cualquier
 
 Entrás al repositorio, tocás el archivo, el lapicito para editar y **Commit changes**. En un minuto se actualiza solo.
 
-En los teléfonos que ya la tienen instalada, el cambio aparece la segunda vez que la abren: la primera muestra la versión guardada mientras baja la nueva por detrás.
+En los teléfonos que ya la tienen instalada, el cambio aparece la segunda vez que la abren con internet: la primera muestra la versión guardada y baja la nueva por detrás. No hay que tocar nada más.
 
-Si tocás `sw.js`, cambiale el número a la línea `var CACHE = "anotador-truco-v1";` (poné `v2`, `v3`, etc.). Eso le avisa a los teléfonos que tiren la copia vieja.
+En iPhone hay una vuelta de tuerca: si pasan más de 7 días sin abrirla, Safari borra lo guardado por su cuenta y la próxima vez necesita internet. Después vuelve a andar sin conexión. Es una política de Apple; en Android no pasa.
 
 ---
 
