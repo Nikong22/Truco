@@ -1,6 +1,6 @@
 {
   "name": "Anotador de Truco",
-  "short_name": "Truco",
+  "short_name": "AnTru",
   "description": "Anotador de truco argentino para dos equipos: partidas a 15 o 30, malas y buenas, y tres disenos.",
   "lang": "es-AR",
   "start_url": "./",

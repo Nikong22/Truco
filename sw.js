@@ -1,7 +1,7 @@
 /* Guarda la app entera la primera vez que se abre, para que despues ande sin internet.
    Sirve lo guardado al instante y, en paralelo, busca si hay version nueva:
    el cambio aparece la segunda vez que se abre con internet. */
-var CACHE = "anotador-truco-v8";
+var CACHE = "anotador-truco-v9";
 var ASSETS = [
   "./",
   "./index.html",
