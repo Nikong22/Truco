@@ -5,24 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Anotador de Truco</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<!-- pwa:begin -->
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#f4f9fd" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#060f24" media="(prefers-color-scheme: dark)">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AnTru">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="icon-192.png">
-<style>
-/* Instalada, la app ocupa toda la pantalla: dejamos libre la franja del reloj y la de gestos */
-.app { padding-block: calc(clamp(16px, 2.4vh, 30px) + env(safe-area-inset-top, 0px)) calc(clamp(14px, 2vh, 24px) + env(safe-area-inset-bottom, 0px)); }
-@media (max-width: 720px) {
-  .app { padding-block: calc(10px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)); }
-}
-</style>
-<!-- pwa:end -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
@@ -577,6 +559,33 @@ kbd {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
 </style>
+<!-- pwa:begin -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" id="barra-color" content="#e6f3fd">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AnTru">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* Instalada, la app ocupa toda la pantalla, incluso detras del reloj y de la
+   barra de gestos. Estos margenes dejan libres esas franjas. En Android valen
+   cero, asi que esto solo mueve algo en los iPhone con notch. */
+.app {
+  padding-block:
+    calc(clamp(16px, 2.4vh, 30px) + env(safe-area-inset-top, 0px))
+    calc(clamp(14px, 2vh, 24px) + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 720px) {
+  .app {
+    padding-block:
+      calc(12px + env(safe-area-inset-top, 0px))
+      calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+}
+</style>
+<!-- pwa:end -->
 </head>
 <body>
 <div class="app">
@@ -672,6 +681,9 @@ kbd {
   var SKINS = ["cielo", "cancha", "noche"];
   var NOMBRES = { cielo: "Cielo", cancha: "Cancha", noche: "Noche" };
   var MAX_NOMBRE = 20;
+  /* Color que el teléfono usa detrás del reloj cuando la app está instalada:
+     el del borde superior de cada fondo, para que la hora se lea. */
+  var BARRA = { cielo: "#e6f3fd", cancha: "#eef7fc", noche: "#081630" };
   var STICKS = ["M12 10 V38", "M36 10 V38", "M12 10 H36", "M12 38 H36", "M12 38 L36 10"];
 
   var state = {
@@ -806,6 +818,8 @@ kbd {
 
   function render() {
     document.documentElement.setAttribute("data-skin", state.skin);
+    var barra = $("barra-color");
+    if (barra) barra.setAttribute("content", BARRA[state.skin]);
     $("skin-name").textContent = NOMBRES[state.skin];
     $("skin-cycle").setAttribute("aria-label", "Diseño " + NOMBRES[state.skin] + ", tocá para cambiar");
     $("t15").setAttribute("aria-pressed", String(state.target === 15));
